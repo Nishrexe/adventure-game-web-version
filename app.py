@@ -2,68 +2,60 @@ from flask import Flask, request, redirect, url_for, render_template_string
 
 app = Flask(__name__)
 
+from flask import Flask, request, render_template_string
+import requests
+
+app = Flask(__name__)
+
+API_KEY = "YO80ad90f7c743aad83bbd0efb8244400c"  # <-- Replace with your real API key
+
 HTML_TEMPLATE = """
 <!doctype html>
-<title>Adventure Game</title>
-<h2>{{ message }}</h2>
-
-{% if options %}
+<title>Weather App</title>
+<h2>Enter a city to get the current weather</h2>
 <form method="post">
-  {% for option in options %}
-    <button name="choice" value="{{ option }}">{{ option }}</button>
-  {% endfor %}
+    <input name="city" placeholder="City name" required>
+    <button type="submit">Get Weather</button>
 </form>
+
+{% if weather %}
+    <h3>Weather in {{ city }}:</h3>
+    <p>{{ weather }}</p>
+{% elif error %}
+    <p style="color:red;">{{ error }}</p>
 {% endif %}
 """
 
-# Game logic moved to route handling
+def get_weather_for_city(city):
+    try:
+        url = (
+            f"http://api.openweathermap.org/data/2.5/weather?q={city}"
+            f"&appid={API_KEY}&units=metric"
+        )
+        response = requests.get(url)
+        data = response.json()
+
+        if response.status_code != 200:
+            return None, data.get("message", "An error occurred.")
+
+        description = data["weather"][0]["description"].capitalize()
+        temperature = data["main"]["temp"]
+        return f"{description}, {temperature}°C", None
+    except Exception as e:
+        return None, str(e)
+
 @app.route("/", methods=["GET", "POST"])
-def game():
-    stage = request.args.get("stage", "intro")
-    name = request.args.get("name", "")
+def weather():
+    weather = None
+    error = None
+    city = None
 
     if request.method == "POST":
-        choice = request.form.get("choice").lower()
+        city = request.form.get("city", "").strip()
+        if city:
+            weather, error = get_weather_for_city(city)
 
-        # Handle choices based on stage
-        if stage == "intro":
-            return redirect(url_for("game", stage=choice, name=name))
-        elif stage == "cave":
-            if choice == "light":
-                return redirect(url_for("game", stage="treasure", name=name))
-            elif choice == "tunnel":
-                return redirect(url_for("game", stage="trap", name=name))
-        elif stage == "treasure" or stage == "trap":
-            if choice == "yes":
-                return redirect(url_for("game", stage="intro", name=name))
-            else:
-                return "Thanks for playing!"
-
-    # Handle GET views
-    if stage == "intro":
-        message = f"Welcome! What's your name?"
-        return render_template_string("""
-            <!doctype html>
-            <form action="/" method="get">
-                <input name="name" placeholder="Enter name">
-                <input type="hidden" name="stage" value="cave">
-                <button type="submit">Start</button>
-            </form>
-        """)
-    elif stage == "cave":
-        message = f"{name}, you stand at the entrance of a dark cave. Do you want to enter the LIGHT or the TUNNEL?"
-        options = ["light", "tunnel"]
-    elif stage == "treasure":
-        message = f"{name}, you found a room full of treasure. You win! Play again?"
-        options = ["yes", "no"]
-    elif stage == "trap":
-        message = f"{name}, you fell into a trap. Game over! Play again?"
-        options = ["yes", "no"]
-    else:
-        message = "Invalid stage."
-        options = []
-
-    return render_template_string(HTML_TEMPLATE, message=message, options=options)
+    return render_template_string(HTML_TEMPLATE, weather=weather, error=error, city=city)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=10000)
