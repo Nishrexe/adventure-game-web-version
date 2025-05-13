@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 
 # Make sure this environment variable is set in Render
-API_KEY = os.getenv("80ad90f7c743aad83bbd0efb8244400c")
+API_KEY = os.getenv("Open_weather_API_Key")
 
 HTML_TEMPLATE = """
 <!doctype html>
