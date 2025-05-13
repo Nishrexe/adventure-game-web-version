@@ -1,11 +1,17 @@
 from flask import Flask, request, render_template_string
 import requests
-import os
 
 app = Flask(__name__)
 
-# Make sure this environment variable is set in Render
-API_KEY = os.getenv("Open_weather_API_Key")
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from a .env file
+load_dotenv()
+
+# Now you can access the API_KEY
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
+
 
 HTML_TEMPLATE = """
 <!doctype html>
@@ -25,9 +31,6 @@ HTML_TEMPLATE = """
 """
 
 def get_weather_for_city(city):
-    if not API_KEY:
-        return None, "API key is missing. Please check environment variable."
-
     try:
         url = (
             f"http://api.openweathermap.org/data/2.5/weather?q={city}"
@@ -37,7 +40,7 @@ def get_weather_for_city(city):
         data = response.json()
 
         if response.status_code != 200:
-            return None, data.get("message", "Error getting weather.")
+            return None, data.get("message", "An error occurred.")
 
         description = data["weather"][0]["description"].capitalize()
         temperature = data["main"]["temp"]
